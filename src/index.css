@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  /* 水墨暗色主题 */
+  --color-ink-black: #0a0a0f;
+  --color-ink-dark: #141420;
+  --color-ink-gray: #1e1e2e;
+  --color-ink-light: #2a2a3a;
+  --color-paper: #e8e0d0;
+  --color-paper-dim: #c4b99a;
+
+  /* 数值色 */
+  --color-dao-gold: #d4a853;
+  --color-yao-red: #8b2020;
+  --color-yi-blue: #4a7a9b;
+
+  /* 功能色 */
+  --color-echo-border: #555566;
+  --color-karma-good: #7a9b4a;
+  --color-karma-bad: #9b4a4a;
+
+  /* 字体 */
+  --font-story: 'LXGW WenKai', 'Noto Serif SC', serif;
+  --font-mono: ui-monospace, Consolas, monospace;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink-black);
+  color: var(--color-paper);
+  font-family: var(--font-story);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100svh;
+}
