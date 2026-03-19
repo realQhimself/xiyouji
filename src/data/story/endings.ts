@@ -40,6 +40,24 @@ const endingNodes: StoryNode[] = [
     transitionText: null,
     conditionalNarration: [],
   },
+  /**
+   * 齐天大圣提前结局入口节点。
+   * 当玩家在紧箍初罚或三打白骨精时选择永久离队，
+   * 游戏引擎跳转到此节点，触发齐天大圣结局。
+   */
+  {
+    id: 'ending-qtds',
+    actId: 5,
+    title: '花果山',
+    narration:
+      '一个筋斗翻了十万八千里。风灌进耳朵，什么都听不见了——师父的念经声、八戒的嘟囔、沙僧的沉默，统统甩在了身后。\n\n花果山在云头下面越来越大。水帘洞的瀑布还在响。',
+    conflict:
+      '你落在山顶的那块石头上。这里是你出生的地方。你回来了。',
+    choices: [],
+    echoConditions: [],
+    transitionText: null,
+    conditionalNarration: [],
+  },
 ];
 
 export default endingNodes;

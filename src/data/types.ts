@@ -145,18 +145,20 @@ export interface StoryNode {
 // ------ 结局 ------
 
 /** 五种结局类型 */
-export enum EndingType {
+export const EndingType = {
   /** 斗战胜佛 — 正统成佛 */
-  DouZhanShengFo = 'dou_zhan_sheng_fo',
+  DouZhanShengFo: 'dou_zhan_sheng_fo',
   /** 齐天大圣 — 不归之猴 */
-  QiTianDaSheng = 'qi_tian_da_sheng',
+  QiTianDaSheng: 'qi_tian_da_sheng',
   /** 心猿归正 — 以义成道 */
-  XinYuanGuiZheng = 'xin_yuan_gui_zheng',
+  XinYuanGuiZheng: 'xin_yuan_gui_zheng',
   /** 大圣陨落 — 悲剧牺牲（隐藏） */
-  DaShengYunLuo = 'da_sheng_yun_luo',
+  DaShengYunLuo: 'da_sheng_yun_luo',
   /** 混世魔王 — 黑化堕魔（隐藏） */
-  HunShiMoWang = 'hun_shi_mo_wang',
-}
+  HunShiMoWang: 'hun_shi_mo_wang',
+} as const;
+
+export type EndingType = (typeof EndingType)[keyof typeof EndingType];
 
 /** 结局判定结果 */
 export interface EndingResult {
