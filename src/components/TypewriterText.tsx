@@ -32,16 +32,22 @@ export default function TypewriterText({
     setIsComplete(false);
   }, [text]);
 
+  // Detect completion
+  useEffect(() => {
+    if (displayedLength >= text.length && !isComplete) {
+      setIsComplete(true);
+      onCompleteRef.current?.();
+    }
+  }, [displayedLength, text.length, isComplete]);
+
   // Typewriter interval
   useEffect(() => {
-    if (isComplete) return;
+    if (isComplete || displayedLength >= text.length) return;
 
     intervalRef.current = setInterval(() => {
       setDisplayedLength((prev) => {
         if (prev >= text.length) {
           if (intervalRef.current) clearInterval(intervalRef.current);
-          setIsComplete(true);
-          onCompleteRef.current?.();
           return prev;
         }
         return prev + 1;
@@ -51,7 +57,7 @@ export default function TypewriterText({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [text, speed, isComplete]);
+  }, [text, speed, isComplete, displayedLength]);
 
   // Skip to full text
   const handleSkip = useCallback(() => {

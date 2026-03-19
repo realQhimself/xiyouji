@@ -257,7 +257,7 @@ export default function App() {
           />
 
           {/* Spacer for fixed header */}
-          <div className="h-16 md:h-20 shrink-0" />
+          <div className="h-24 md:h-28 shrink-0" />
 
           <NarrativeBox
             key={currentNode.id}
