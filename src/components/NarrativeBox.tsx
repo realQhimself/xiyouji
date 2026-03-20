@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import TypewriterText from './TypewriterText.tsx';
 
 interface NarrativeBoxProps {
@@ -21,6 +21,8 @@ interface NarrativeBoxProps {
  * 1. Echo feedback from previous choice (static, italic, dimmed)
  * 2. Karma echoes (static, with left border)
  * 3. Main narration + conditional narration + conflict (typewriter)
+ *
+ * Click anywhere in the box to skip typewriter and show full text.
  */
 export default function NarrativeBox({
   narration,
@@ -31,6 +33,8 @@ export default function NarrativeBox({
   onNarrationComplete,
 }: NarrativeBoxProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const skipRef = useRef<(() => void) | null>(null);
+  const [isTyping, setIsTyping] = useState(true);
 
   // Auto-scroll to bottom as content grows
   useEffect(() => {
@@ -39,6 +43,23 @@ export default function NarrativeBox({
       el.scrollTop = el.scrollHeight;
     }
   });
+
+  // Reset typing state when narration changes
+  useEffect(() => {
+    setIsTyping(true);
+  }, [narration]);
+
+  const handleComplete = useCallback(() => {
+    setIsTyping(false);
+    onNarrationComplete();
+  }, [onNarrationComplete]);
+
+  // Click anywhere to skip
+  const handleClick = useCallback(() => {
+    if (isTyping && skipRef.current) {
+      skipRef.current();
+    }
+  }, [isTyping]);
 
   // Build the typewriter text: narration + conditional additions + conflict
   const parts = [narration];
@@ -52,7 +73,8 @@ export default function NarrativeBox({
   return (
     <div
       ref={scrollRef}
-      className="flex-1 overflow-y-auto px-4 md:px-8 py-6"
+      onClick={handleClick}
+      className={`flex-1 overflow-y-auto px-4 md:px-8 py-6 ${isTyping ? 'cursor-pointer' : ''}`}
     >
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Echo feedback from previous choice */}
@@ -84,11 +106,19 @@ export default function NarrativeBox({
         <div className="animate-fade-in">
           <TypewriterText
             text={fullTypewriterText}
-            speed={45}
-            onComplete={onNarrationComplete}
+            speed={30}
+            onComplete={handleComplete}
+            onSkipRef={skipRef}
             className="text-paper leading-loose text-base md:text-lg whitespace-pre-line"
           />
         </div>
+
+        {/* Skip hint */}
+        {isTyping && (
+          <p className="text-paper-dim/25 text-xs text-center tracking-wider animate-fade-in pt-2">
+            点击任意处跳过
+          </p>
+        )}
       </div>
     </div>
   );

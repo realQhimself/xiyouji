@@ -1,21 +1,24 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type MutableRefObject } from 'react';
 
 interface TypewriterTextProps {
   text: string;
   speed?: number;
   onComplete?: () => void;
+  /** Parent can pass a ref to receive the skip function */
+  onSkipRef?: MutableRefObject<(() => void) | null>;
   className?: string;
 }
 
 /**
  * Typewriter effect component.
  * Displays text character by character.
- * Click anywhere on the component to skip and show full text instantly.
+ * Click anywhere on the component (or call onSkipRef) to skip.
  */
 export default function TypewriterText({
   text,
   speed = 50,
   onComplete,
+  onSkipRef,
   className = '',
 }: TypewriterTextProps) {
   const [displayedLength, setDisplayedLength] = useState(0);
@@ -68,10 +71,20 @@ export default function TypewriterText({
     onCompleteRef.current?.();
   }, [isComplete, text.length]);
 
+  // Expose skip function to parent
+  useEffect(() => {
+    if (onSkipRef) {
+      onSkipRef.current = handleSkip;
+    }
+    return () => {
+      if (onSkipRef) onSkipRef.current = null;
+    };
+  }, [onSkipRef, handleSkip]);
+
   const displayedText = text.slice(0, displayedLength);
 
   return (
-    <div onClick={handleSkip} className={`cursor-pointer select-none ${className}`}>
+    <div onClick={handleSkip} className={`select-none ${className}`}>
       {displayedText.split('\n').map((line, i, arr) => (
         <span key={i}>
           {line}
