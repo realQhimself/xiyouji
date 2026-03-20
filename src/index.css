@@ -121,3 +121,15 @@ body {
   0%, 100% { box-shadow: 0 0 8px 0 currentColor; }
   50% { box-shadow: 0 0 16px 2px currentColor; }
 }
+
+/* Stat delta toast: float up and fade out */
+@keyframes statDeltaToast {
+  0% { opacity: 0; transform: translateY(8px); }
+  15% { opacity: 1; transform: translateY(0); }
+  70% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-12px); }
+}
+
+.stat-delta-toast {
+  animation: statDeltaToast 2.5s ease-out forwards;
+}

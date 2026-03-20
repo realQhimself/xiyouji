@@ -2,7 +2,7 @@
 // 西游·心猿 — 状态管理 (useReducer)
 // ============================================================
 
-import { useReducer } from 'react';
+import { useReducer, useEffect } from 'react';
 import type {
   GameState,
   Choice,
@@ -10,6 +10,54 @@ import type {
   EndingResult,
   WhiteBoneRound,
 } from '../data/types.ts';
+
+// ------ 存档管理 ------
+
+const SAVE_KEY = 'xiyouji-save';
+
+/** 保存游戏状态到 localStorage */
+export function saveGame(state: GameState): void {
+  try {
+    // 不保存已结束的游戏
+    if (state.isEnded) {
+      localStorage.removeItem(SAVE_KEY);
+      return;
+    }
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  } catch {
+    // localStorage 不可用时静默失败
+  }
+}
+
+/** 从 localStorage 加载存档 */
+export function loadSave(): GameState | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as GameState;
+    // 基本校验：必须有 currentNodeId 和 stats
+    if (saved.currentNodeId && saved.stats && typeof saved.stats.daoXin === 'number') {
+      return saved;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** 清除存档 */
+export function clearSave(): void {
+  try {
+    localStorage.removeItem(SAVE_KEY);
+  } catch {
+    // 静默失败
+  }
+}
+
+/** 检查是否有存档 */
+export function hasSave(): boolean {
+  return loadSave() !== null;
+}
 
 // ------ 初始状态 ------
 
@@ -84,6 +132,10 @@ export type GameAction =
     }
   | {
       type: 'SET_SELF_SACRIFICE';
+    }
+  | {
+      type: 'LOAD_SAVE';
+      payload: GameState;
     }
   | {
       type: 'RESET_GAME';
@@ -212,7 +264,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, selfSacrifice: true };
     }
 
+    case 'LOAD_SAVE': {
+      return action.payload;
+    }
+
     case 'RESET_GAME': {
+      clearSave();
       return createInitialState();
     }
 
@@ -224,5 +281,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 // ------ Custom Hook ------
 
 export function useGameState() {
-  return useReducer(gameReducer, undefined, createInitialState);
+  const [state, dispatch] = useReducer(gameReducer, undefined, createInitialState);
+
+  // 每次状态变化时自动保存（跳过初始状态）
+  useEffect(() => {
+    if (state.history.length > 0) {
+      saveGame(state);
+    }
+  }, [state]);
+
+  return [state, dispatch] as const;
 }

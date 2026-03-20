@@ -3,6 +3,7 @@ import type { Stats } from '../data/types.ts';
 
 interface StatusBarProps {
   actTitle: string;
+  sceneTitle?: string;
   stats: Stats;
 }
 
@@ -22,7 +23,7 @@ export function getActTitle(actId: number): string {
  * Top status bar showing current act title and three progress bars.
  * On mobile, can be collapsed to icon-only mode.
  */
-export default function StatusBar({ actTitle, stats }: StatusBarProps) {
+export default function StatusBar({ actTitle, sceneTitle, stats }: StatusBarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   const bars = [
@@ -54,14 +55,35 @@ export default function StatusBar({ actTitle, stats }: StatusBarProps) {
       <div className="max-w-2xl mx-auto px-4 py-2">
         {/* Act title + collapse toggle */}
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-sm text-paper-dim tracking-widest">{actTitle}</h2>
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="text-paper-dim/60 text-xs md:hidden p-1"
-            aria-label={collapsed ? '展开状态栏' : '收起状态栏'}
-          >
-            {collapsed ? '展开' : '收起'}
-          </button>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm text-paper-dim tracking-widest">{actTitle}</h2>
+            {sceneTitle && (
+              <>
+                <span className="text-paper-dim/30 text-xs">·</span>
+                <span className="text-paper-dim/50 text-xs tracking-wider">{sceneTitle}</span>
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {/* 善恶业计数器 */}
+            {(stats.shanYe > 0 || stats.eYe > 0) && (
+              <div className="flex items-center gap-2 text-xs">
+                {stats.shanYe > 0 && (
+                  <span className="text-karma-good/70">善 {stats.shanYe}</span>
+                )}
+                {stats.eYe > 0 && (
+                  <span className="text-karma-bad/70">恶 {stats.eYe}</span>
+                )}
+              </div>
+            )}
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="text-paper-dim/60 text-xs md:hidden p-1"
+              aria-label={collapsed ? '展开状态栏' : '收起状态栏'}
+            >
+              {collapsed ? '展开' : '收起'}
+            </button>
+          </div>
         </div>
 
         {/* Progress bars */}

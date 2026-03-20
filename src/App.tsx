@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useGameState } from './engine/gameState.ts';
+import { useGameState, loadSave, clearSave } from './engine/gameState.ts';
 import {
   getVisibleChoices,
   getActiveEchoes,
@@ -8,7 +8,7 @@ import {
 } from './engine/conditions.ts';
 import { determineEnding } from './engine/endings.ts';
 import { storyNodeMap } from './data/story/index.ts';
-import type { Choice, StoryNode } from './data/types.ts';
+import type { Choice, StoryNode, Stats } from './data/types.ts';
 
 import StartScreen from './components/StartScreen.tsx';
 import StatusBar, { getActTitle } from './components/StatusBar.tsx';
@@ -18,6 +18,33 @@ import SceneTransition from './components/SceneTransition.tsx';
 import EndingScreen from './components/EndingScreen.tsx';
 
 type GamePhase = 'start' | 'playing' | 'transition' | 'ending';
+
+/** 数值变化提示 */
+interface StatDelta {
+  label: string;
+  delta: number;
+  color: string;
+}
+
+const STAT_LABELS: Record<string, { label: string; color: string }> = {
+  daoXin: { label: '道心', color: 'text-dao-gold' },
+  yaoXing: { label: '妖性', color: 'text-yao-red-bright' },
+  yiQi: { label: '义气', color: 'text-yi-blue-bright' },
+  shanYe: { label: '善业', color: 'text-karma-good' },
+  eYe: { label: '恶业', color: 'text-karma-bad' },
+};
+
+function calcStatDeltas(oldStats: Stats, newStats: Stats): StatDelta[] {
+  const deltas: StatDelta[] = [];
+  for (const key of Object.keys(STAT_LABELS) as (keyof Stats)[]) {
+    const diff = newStats[key] - oldStats[key];
+    if (diff !== 0) {
+      const info = STAT_LABELS[key]!;
+      deltas.push({ label: info.label, delta: diff, color: info.color });
+    }
+  }
+  return deltas;
+}
 
 /**
  * Background gradient based on current act/scene.
@@ -79,6 +106,7 @@ export default function App() {
   const [transitionActTitle, setTransitionActTitle] = useState<string | null>(null);
   const [transitionText, setTransitionText] = useState<string | null>(null);
   const [pendingNodeId, setPendingNodeId] = useState<string | null>(null);
+  const [statDeltas, setStatDeltas] = useState<StatDelta[]>([]);
   const lastActIdRef = useRef<number>(1);
 
   // Current node (resolved with condition checks)
@@ -86,15 +114,40 @@ export default function App() {
     ? resolveNode(state.currentNodeId, state)
     : null;
 
-  // Handle starting the game
+  // Handle starting a new game
   const handleStart = useCallback(() => {
+    clearSave();
+    dispatch({ type: 'RESET_GAME' });
     setPhase('playing');
     setNarrationComplete(false);
     setLastEchoFeedback(null);
-  }, []);
+    setStatDeltas([]);
+  }, [dispatch]);
+
+  // Handle continuing from save
+  const handleContinue = useCallback(() => {
+    const saved = loadSave();
+    if (saved) {
+      dispatch({ type: 'LOAD_SAVE', payload: saved });
+      const node = storyNodeMap.get(saved.currentNodeId);
+      if (node) {
+        lastActIdRef.current = node.actId;
+      }
+      setPhase('playing');
+      setNarrationComplete(false);
+      setLastEchoFeedback(null);
+      setStatDeltas([]);
+    } else {
+      // 存档无效，重新开始
+      handleStart();
+    }
+  }, [dispatch, handleStart]);
 
   // Handle choice selection
   const handleChoice = useCallback((choice: Choice) => {
+    // 记录选择前的数值，用于计算变化量
+    const prevStats = { ...state.stats };
+
     // Record whiteBoneTag if present
     if (choice.whiteBoneTag) {
       const roundNum = parseInt(choice.whiteBoneTag[0]!) as 1 | 2 | 3;
@@ -164,6 +217,21 @@ export default function App() {
     // Check if there's a transitionText on the current node
     const currentTransitionText = currentNode?.transitionText ?? null;
 
+    // 计算数值变化提示（在任何场景切换前显示）
+    const computedStats = { ...prevStats };
+    for (const sc of choice.effects.statChanges) {
+      if (sc.setTo !== undefined) {
+        computedStats[sc.stat] = sc.setTo;
+      } else {
+        computedStats[sc.stat] += sc.delta;
+      }
+    }
+    const deltas = calcStatDeltas(prevStats, computedStats);
+    if (deltas.length > 0) {
+      setStatDeltas(deltas);
+      setTimeout(() => setStatDeltas([]), 2500);
+    }
+
     if (isEndingNode) {
       // Transition to ending
       setTransitionActTitle(null);
@@ -206,10 +274,12 @@ export default function App() {
 
   // Handle restart
   const handleRestart = useCallback(() => {
+    clearSave();
     dispatch({ type: 'RESET_GAME' });
     setPhase('start');
     setNarrationComplete(false);
     setLastEchoFeedback(null);
+    setStatDeltas([]);
     lastActIdRef.current = 1;
   }, [dispatch]);
 
@@ -246,13 +316,14 @@ export default function App() {
       style={{ background: getBackgroundGradient(currentActId, state.currentNodeId) }}
     >
       {/* Start Screen */}
-      {phase === 'start' && <StartScreen onStart={handleStart} />}
+      {phase === 'start' && <StartScreen onStart={handleStart} onContinue={handleContinue} />}
 
       {/* Playing */}
       {phase === 'playing' && currentNode && (
         <>
           <StatusBar
             actTitle={getActTitle(currentNode.actId)}
+            sceneTitle={currentNode.title}
             stats={state.stats}
           />
 
@@ -296,6 +367,27 @@ export default function App() {
           state={state}
           onRestart={handleRestart}
         />
+      )}
+
+      {/* Stat Change Toast */}
+      {statDeltas.length > 0 && (
+        <div className="fixed top-16 right-4 z-[90] flex flex-col gap-1.5 animate-fade-in">
+          {statDeltas.map((d, i) => (
+            <div
+              key={i}
+              className={`
+                stat-delta-toast px-3 py-1.5 rounded-md
+                bg-ink-dark/90 backdrop-blur-sm
+                border border-ink-light/40
+                text-sm tracking-wider
+                ${d.color}
+              `}
+              style={{ animationDelay: `${i * 100}ms` }}
+            >
+              {d.label} {d.delta > 0 ? '+' : ''}{d.delta}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
